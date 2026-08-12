@@ -7,7 +7,7 @@ const PILL_MAP = {
   overdue: ['red', 'OVERDUE'], soon: ['amber', 'DUE SOON'], setdate: ['blue', 'NO DATE'],
 };
 
-export default function Overview({ state, onToggleRecur, onToggleTask, goToClient }) {
+export default function Overview({ state, onToggleRecur, onToggleTask, onSetExpiry, goToClient }) {
   let allTasks = [];
   state.clients.forEach((c) => {
     const rs = state.recurStatus[c.id] || {};
@@ -57,7 +57,9 @@ export default function Overview({ state, onToggleRecur, onToggleTask, goToClien
           <div className="task-list">
             {allTasks.map((t) => t.kind === 'recur' ? (
               <TaskRow key={t.client.id + t.item.key} client={t.client} item={t.item} due={t.due} status={t.status}
-                showCompany onToggle={() => onToggleRecur(t.client, t.item)} />
+                showCompany onToggle={() => onToggleRecur(t.client, t.item)}
+                completion={(state.recurStatus[t.client.id] || {})[t.item.key]}
+                onSetExpiry={(val) => onSetExpiry(t.client.id, t.item.key, val)} />
             ) : (
               <div className={`task`} key={t.task.id}>
                 <button className="chk" onClick={() => onToggleTask(t.client.id, t.task)} aria-label={`Mark ${t.task.label} done`}>

@@ -1,5 +1,5 @@
 'use client';
-import { SETUP_ITEMS, RECURRING_ITEMS, itemApplies, statusOf, isoKey, titleCase, resolveFreq, customTaskStatus } from '@/lib/complianceLogic';
+import { SETUP_ITEMS, RECURRING_ITEMS, SERVICES, itemApplies, statusOf, isoKey, titleCase, resolveFreq, customTaskStatus } from '@/lib/complianceLogic';
 
 const NAV_ICONS = {
   overview: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></>,
@@ -8,6 +8,11 @@ const NAV_ICONS = {
   quarterly: <><path d="M21 12a9 9 0 1 1-3.5-7.1" /><path d="M21 3v6h-6" /></>,
   yearly: <path d="M12 2l2.6 6.6L21 9l-5 4.6L17.4 21 12 17.3 6.6 21 8 13.6 3 9l6.4-.4z" />,
   other: <><path d="M9 12h6M9 16h6M9 8h6" /><path d="M5 4h10l4 4v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Z" /></>,
+  trucking: <><rect x="1" y="8" width="14" height="8" rx="1" /><path d="M15 10h4l3 3v3h-7z" /><circle cx="6" cy="18" r="1.6" /><circle cx="17" cy="18" r="1.6" /></>,
+  bookkeeping: <><path d="M4 4h16v16H4z" /><path d="M8 9h8M8 13h8M8 17h5" /></>,
+  payroll: <><circle cx="12" cy="8" r="3.5" /><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" /></>,
+  excise: <><path d="M3 12h18" /><path d="M7 6l-4 6 4 6M17 6l4 6-4 6" /></>,
+  immigration: <><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z" /><path d="M9 12l2 2 4-4" /></>,
 };
 function Icon({ k }) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" width="14" height="14">{NAV_ICONS[k]}</svg>;
@@ -41,6 +46,28 @@ function countFreqActionable(freq, state) {
     const hiddenSet = new Set(state.hidden[c.id] || []);
     RECURRING_ITEMS.forEach((it) => {
       if (resolveFreq(it, c) !== freq || !itemApplies(it.applies, c) || hiddenSet.has(it.key)) return;
+      const due = it.due(c);
+      const r = rs[it.key];
+      const s = statusOf(due, r && r.doneKey, due ? isoKey(due) : null);
+      if (s === 'overdue' || s === 'soon' || s === 'setdate') n++;
+    });
+  });
+  return n;
+}
+function countServiceActionable(service, state) {
+  let n = 0;
+  state.clients.forEach((c) => {
+    if (!Array.isArray(c.services) || !c.services.includes(service)) return;
+    const st = state.setupStatus[c.id] || {};
+    SETUP_ITEMS.forEach((it) => {
+      if (it.service !== service || !itemApplies(it.applies, c)) return;
+      const s = st[it.key];
+      if (!s || (!s.done && !s.na)) n++;
+    });
+    const rs = state.recurStatus[c.id] || {};
+    const hiddenSet = new Set(state.hidden[c.id] || []);
+    RECURRING_ITEMS.forEach((it) => {
+      if (it.service !== service || !itemApplies(it.applies, c) || hiddenSet.has(it.key)) return;
       const due = it.due(c);
       const r = rs[it.key];
       const s = statusOf(due, r && r.doneKey, due ? isoKey(due) : null);
@@ -96,9 +123,16 @@ export default function Sidebar({ state, currentView, setCurrentView, onAddCompa
         <Item view="overview" iconKey="overview" label="Overview" count={overviewUrgent} urgent={overviewUrgent > 0} />
         <div className="nav-sep" />
         <Item view="setup" iconKey="setup" label="New Company Setup" count={setupCount} urgent={false} />
+        <div className="nav-group-label">By deadline</div>
         <Item view="monthly" iconKey="monthly" label="Monthly" count={monthlyCount} urgent={monthlyCount > 0} />
         <Item view="quarterly" iconKey="quarterly" label="Quarterly" count={quarterlyCount} urgent={quarterlyCount > 0} />
         <Item view="yearly" iconKey="yearly" label="Yearly" count={yearlyCount} urgent={yearlyCount > 0} />
+        <div className="nav-group-label">By service</div>
+        {SERVICES.map((s) => {
+          const count = countServiceActionable(s.key, state);
+          return <Item key={s.key} view={s.key} iconKey={s.key} label={s.label} count={count} urgent={count > 0} />;
+        })}
+        <div className="nav-sep" />
         <Item view="other" iconKey="other" label="Other Tasks" count={otherCount} urgent={otherCount > 0} />
         <div className="nav-sep" />
         <div className="nav-group-label">Clients</div>

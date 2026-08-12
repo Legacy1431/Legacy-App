@@ -51,7 +51,6 @@ create table if not exists recur_status (
   item_key text not null,
   done_period text,
   completed_at date,
-  expires_on date,
   updated_at timestamptz default now(),
   primary key (client_id, item_key)
 );
@@ -90,37 +89,48 @@ alter table recur_status enable row level security;
 alter table hidden_items enable row level security;
 alter table team_members enable row level security;
 
+drop policy if exists "team can read clients" on clients;
 create policy "team can read clients" on clients for select
   using (exists (select 1 from team_members where user_id = auth.uid()));
+drop policy if exists "team can write clients" on clients;
 create policy "team can write clients" on clients for all
   using (exists (select 1 from team_members where user_id = auth.uid()))
   with check (exists (select 1 from team_members where user_id = auth.uid()));
 
+drop policy if exists "team can read setup_status" on setup_status;
 create policy "team can read setup_status" on setup_status for select
   using (exists (select 1 from team_members where user_id = auth.uid()));
+drop policy if exists "team can write setup_status" on setup_status;
 create policy "team can write setup_status" on setup_status for all
   using (exists (select 1 from team_members where user_id = auth.uid()))
   with check (exists (select 1 from team_members where user_id = auth.uid()));
 
+drop policy if exists "team can read recur_status" on recur_status;
 create policy "team can read recur_status" on recur_status for select
   using (exists (select 1 from team_members where user_id = auth.uid()));
+drop policy if exists "team can write recur_status" on recur_status;
 create policy "team can write recur_status" on recur_status for all
   using (exists (select 1 from team_members where user_id = auth.uid()))
   with check (exists (select 1 from team_members where user_id = auth.uid()));
 
+drop policy if exists "team can read hidden_items" on hidden_items;
 create policy "team can read hidden_items" on hidden_items for select
   using (exists (select 1 from team_members where user_id = auth.uid()));
+drop policy if exists "team can write hidden_items" on hidden_items;
 create policy "team can write hidden_items" on hidden_items for all
   using (exists (select 1 from team_members where user_id = auth.uid()))
   with check (exists (select 1 from team_members where user_id = auth.uid()));
 
 alter table custom_tasks enable row level security;
+drop policy if exists "team can read custom_tasks" on custom_tasks;
 create policy "team can read custom_tasks" on custom_tasks for select
   using (exists (select 1 from team_members where user_id = auth.uid()));
+drop policy if exists "team can write custom_tasks" on custom_tasks;
 create policy "team can write custom_tasks" on custom_tasks for all
   using (exists (select 1 from team_members where user_id = auth.uid()))
   with check (exists (select 1 from team_members where user_id = auth.uid()));
 
+drop policy if exists "team can read own membership" on team_members;
 create policy "team can read own membership" on team_members for select
   using (auth.uid() = user_id);
 

@@ -9,7 +9,7 @@ const SUBS = {
   yearly: 'Annual and biennial renewals — 2290, UCR, IFTA license, insurance, MCS-150, and WA annual reports — across every client.',
 };
 
-export default function CategoryPage({ freq, state, onToggleRecur }) {
+export default function CategoryPage({ freq, state, onToggleRecur, onSetExpiry }) {
   const [showRest, setShowRest] = useState(false);
   const meta = FREQ_META[freq];
   let rows = [];
@@ -52,7 +52,9 @@ export default function CategoryPage({ freq, state, onToggleRecur }) {
           <div className="task-list">
             {urgent.map((r) => (
               <TaskRow key={r.client.id + r.item.key} client={r.client} item={r.item} due={r.due} status={r.status}
-                showCompany onToggle={() => onToggleRecur(r.client, r.item)} />
+                showCompany onToggle={() => onToggleRecur(r.client, r.item)}
+                completion={(state.recurStatus[r.client.id] || {})[r.item.key]}
+                onSetExpiry={(val) => onSetExpiry(r.client.id, r.item.key, val)} />
             ))}
           </div>
         </>
@@ -68,7 +70,9 @@ export default function CategoryPage({ freq, state, onToggleRecur }) {
             <div className="task-list">
               {rest.map((r) => (
                 <TaskRow key={r.client.id + r.item.key} client={r.client} item={r.item} due={r.due} status={r.status}
-                  showCompany onToggle={() => onToggleRecur(r.client, r.item)} />
+                  showCompany onToggle={() => onToggleRecur(r.client, r.item)}
+                  completion={(state.recurStatus[r.client.id] || {})[r.item.key]}
+                  onSetExpiry={(val) => onSetExpiry(r.client.id, r.item.key, val)} />
               ))}
             </div>
           )}

@@ -1,15 +1,15 @@
 'use client';
 import { SETUP_ITEMS, itemApplies } from '@/lib/complianceLogic';
 
-export function computeSetupProgress(client, setupStatus) {
-  const applicable = SETUP_ITEMS.filter((it) => itemApplies(it.applies, client));
+export function computeSetupProgress(client, setupStatus, itemsOverride) {
+  const applicable = (itemsOverride || SETUP_ITEMS).filter((it) => itemApplies(it.applies, client));
   const st = setupStatus[client.id] || {};
   const done = applicable.filter((it) => { const s = st[it.key]; return s && (s.done || s.na); }).length;
   return { applicable, total: applicable.length, done };
 }
 
-export default function SetupChecklist({ client, setupStatus, onToggleDone, onToggleNA }) {
-  const { applicable } = computeSetupProgress(client, setupStatus);
+export default function SetupChecklist({ client, setupStatus, onToggleDone, onToggleNA, itemsOverride }) {
+  const { applicable } = computeSetupProgress(client, setupStatus, itemsOverride);
   const st = setupStatus[client.id] || {};
   return (
     <div className="setup-list">

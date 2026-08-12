@@ -18,12 +18,18 @@ or a custom domain later) that only you and whoever you add can sign into.
 
 ## What's tracked
 Each client can have any mix of **services** turned on — Trucking Compliance,
-Bookkeeping, Payroll, WA Excise Tax — set on their profile. Whichever are
-checked determines their setup checklist and which Monthly/Quarterly/Yearly
-items apply to them. A restaurant client with just Bookkeeping + Payroll sees
-none of the trucking items; a trucking client can also have Bookkeeping and
-Payroll turned on if you do that work for them too. **Other Tasks** is a
-freeform list per client for anything one-off that doesn't fit a template.
+Bookkeeping, Payroll, WA Excise Tax, Immigration & Passport — set on their
+profile. Whichever are checked determines their setup checklist and which
+items apply to them. The sidebar has both a **By deadline** view (Monthly /
+Quarterly / Yearly, useful for batching the same kind of filing across every
+client at once) and a **By service** view (Trucking / Bookkeeping / Payroll /
+Excise / Immigration, useful for seeing one whole line of work at a glance).
+Immigration & Passport (including Indian passport reissue and OCI) is
+case-based rather than annually recurring, so it gets a repeatable intake
+checklist — track each specific case's own due date on that client's **Other
+Tasks** list. For items where it matters (like IRP, insurance, annual
+inspection), once you mark something filed you can also record its actual
+**expiration date**, separate from the filing deadline.
 
 ## 1. Create your Supabase project (database + login)
 1. Go to supabase.com and sign up (free).
@@ -36,8 +42,9 @@ freeform list per client for anything one-off that doesn't fit a template.
 
    **Already deployed this before and have real data in it?** Don't re-run
    schema.sql — instead run `supabase/migrations/002_add_services_and_tasks.sql`
-   the same way. It only adds the new columns/tables and leaves everything
-   you've entered untouched.
+   and then `supabase/migrations/003_add_expires_on.sql`, in that order, the
+   same way. They only add new columns/tables and leave everything you've
+   entered untouched.
 5. Go to **Settings → API**. Copy the **Project URL** and the **anon public**
    key — you'll need both in step 3 below.
 

@@ -26,7 +26,7 @@ function CustomTaskRow({ task, onToggle, onDelete }) {
   );
 }
 
-export default function CompanyPage({ client, state, onEdit, onToggleRecur, onToggleSetupDone, onToggleSetupNA, onHide, onUnhide, onAddTask, onToggleTask, onDeleteTask }) {
+export default function CompanyPage({ client, state, onEdit, onToggleRecur, onToggleSetupDone, onToggleSetupNA, onHide, onUnhide, onAddTask, onToggleTask, onDeleteTask, onSetExpiry }) {
   const [showRest, setShowRest] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [taskLabel, setTaskLabel] = useState('');
@@ -123,7 +123,8 @@ export default function CompanyPage({ client, state, onEdit, onToggleRecur, onTo
         <div className="task-list">
           {urgent.map((r) => (
             <TaskRow key={r.item.key} client={client} item={r.item} due={r.due} status={r.status}
-              onToggle={() => onToggleRecur(client, r.item)} onHide={() => onHide(client.id, r.item.key)} />
+              onToggle={() => onToggleRecur(client, r.item)} onHide={() => onHide(client.id, r.item.key)}
+              completion={rs[r.item.key]} onSetExpiry={(val) => onSetExpiry(client.id, r.item.key, val)} />
           ))}
         </div>
       )}
@@ -138,7 +139,8 @@ export default function CompanyPage({ client, state, onEdit, onToggleRecur, onTo
             <div className="task-list">
               {[...doneRows, ...upcoming].map((r) => (
                 <TaskRow key={r.item.key} client={client} item={r.item} due={r.due} status={r.status}
-                  onToggle={() => onToggleRecur(client, r.item)} onHide={() => onHide(client.id, r.item.key)} />
+                  onToggle={() => onToggleRecur(client, r.item)} onHide={() => onHide(client.id, r.item.key)}
+                  completion={rs[r.item.key]} onSetExpiry={(val) => onSetExpiry(client.id, r.item.key, val)} />
               ))}
             </div>
           )}

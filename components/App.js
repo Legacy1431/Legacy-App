@@ -1,13 +1,14 @@
 'use client';
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { isoKey } from '@/lib/complianceLogic';
+import { isoKey, SERVICES } from '@/lib/complianceLogic';
 import * as store from '@/lib/dataStore';
 import Login from './Login';
 import Sidebar from './Sidebar';
 import Overview from './Overview';
 import CategoryPage from './CategoryPage';
 import SetupPage from './SetupPage';
+import ServicePage from './ServicePage';
 import CompanyPage from './CompanyPage';
 import OtherTasksPage from './OtherTasksPage';
 import ClientModal from './ClientModal';
@@ -71,10 +72,19 @@ export default function App() {
     const curKey = due ? isoKey(due) : null;
     const bucket = (state.recurStatus[client.id] || {})[item.key] || {};
     const nowDone = bucket.doneKey === curKey;
-    const patch = nowDone ? { doneKey: null, date: null } : { doneKey: curKey, date: new Date().toISOString().slice(0, 10) };
+    const patch = nowDone
+      ? { doneKey: null, date: null }
+      : { doneKey: curKey, date: new Date().toISOString().slice(0, 10), expiresOn: bucket.expiresOn || '' };
     // optimistic update
     setState((s) => ({ ...s, recurStatus: { ...s.recurStatus, [client.id]: { ...(s.recurStatus[client.id] || {}), [item.key]: patch } } }));
     try { await store.setRecurItem(client.id, item.key, patch); } catch (e) { console.error(e); refresh(); }
+  }
+
+  async function onSetExpiry(clientId, itemKey, expiresOn) {
+    const bucket = (state.recurStatus[clientId] || {})[itemKey] || {};
+    const patch = { ...bucket, expiresOn };
+    setState((s) => ({ ...s, recurStatus: { ...s.recurStatus, [clientId]: { ...(s.recurStatus[clientId] || {}), [itemKey]: patch } } }));
+    try { await store.setRecurItem(clientId, itemKey, patch); } catch (e) { console.error(e); refresh(); }
   }
 
   async function onToggleSetupDone(clientId, itemKey) {
@@ -146,20 +156,26 @@ export default function App() {
   }
 
   const catViews = { monthly: 1, quarterly: 1, yearly: 1 };
+  const svcViews = { trucking: 1, bookkeeping: 1, payroll: 1, excise: 1, immigration: 1 };
   const client = state.clients.find((c) => c.id === currentView);
   let body;
   if (loading) body = <div style={{ padding: 20, color: 'var(--muted)' }}>Loading your data…</div>;
-  else if (currentView === 'overview') body = <Overview state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} goToClient={setCurrentView} />;
+  else if (currentView === 'overview') body = <Overview state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} onSetExpiry={onSetExpiry} goToClient={setCurrentView} />;
   else if (currentView === 'setup') body = <SetupPage state={state} onToggleDone={onToggleSetupDone} onToggleNA={onToggleSetupNA} />;
   else if (currentView === 'other') body = <OtherTasksPage state={state} onAdd={onAddTask} onToggle={onToggleTask} onDelete={onDeleteTask} />;
-  else if (catViews[currentView]) body = <CategoryPage freq={currentView} state={state} onToggleRecur={onToggleRecur} />;
+  else if (catViews[currentView]) body = <CategoryPage freq={currentView} state={state} onToggleRecur={onToggleRecur} onSetExpiry={onSetExpiry} />;
+  else if (svcViews[currentView]) {
+    const svc = SERVICES.find((s) => s.key === currentView);
+    body = <ServicePage service={currentView} serviceLabel={svc ? svc.label : currentView} state={state}
+      onToggleRecur={onToggleRecur} onToggleSetupDone={onToggleSetupDone} onToggleSetupNA={onToggleSetupNA} onSetExpiry={onSetExpiry} />;
+  }
   else if (client) {
     body = (
       <CompanyPage client={client} state={state} onEdit={() => setModalClient(client)}
         onToggleRecur={onToggleRecur} onToggleSetupDone={onToggleSetupDone} onToggleSetupNA={onToggleSetupNA}
-        onHide={onHide} onUnhide={onUnhide} onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} />
+        onHide={onHide} onUnhide={onUnhide} onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onSetExpiry={onSetExpiry} />
     );
-  } else { body = <Overview state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} goToClient={setCurrentView} />; }
+  } else { body = <Overview state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} onSetExpiry={onSetExpiry} goToClient={setCurrentView} />; }
 
   return (
     <div className="app">
