@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { isoKey, SERVICES } from '@/lib/complianceLogic';
 import * as store from '@/lib/dataStore';
@@ -11,8 +11,10 @@ import SetupPage from './SetupPage';
 import ServicePage from './ServicePage';
 import CompanyPage from './CompanyPage';
 import OtherTasksPage from './OtherTasksPage';
+import CalendarPage from './CalendarPage';
 import ClientModal from './ClientModal';
 import BackupModal from './BackupModal';
+import Toast from './Toast';
 
 const EMPTY_STATE = { clients: [], setupStatus: {}, recurStatus: {}, hidden: {}, customTasks: {} };
 
@@ -25,6 +27,18 @@ export default function App() {
   const [currentView, setCurrentView] = useState('overview');
   const [modalClient, setModalClient] = useState(undefined); // undefined = closed, null = "add new"
   const [showBackup, setShowBackup] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  function showToast(message, onUndo) {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast({ message, onUndo });
+    toastTimer.current = setTimeout(() => setToast(null), 6000);
+  }
+  function dismissToast() {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(null);
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
@@ -67,7 +81,7 @@ export default function App() {
     );
   }
 
-  async function onToggleRecur(client, item) {
+  async function onToggleRecur(client, item, opts) {
     const due = item.due(client);
     const curKey = due ? isoKey(due) : null;
     const bucket = (state.recurStatus[client.id] || {})[item.key] || {};
@@ -78,6 +92,9 @@ export default function App() {
     // optimistic update
     setState((s) => ({ ...s, recurStatus: { ...s.recurStatus, [client.id]: { ...(s.recurStatus[client.id] || {}), [item.key]: patch } } }));
     try { await store.setRecurItem(client.id, item.key, patch); } catch (e) { console.error(e); refresh(); }
+    if (!nowDone && !(opts && opts.silent)) {
+      showToast(`${item.label} marked done`, () => onToggleRecur(client, item, { silent: true }));
+    }
   }
 
   async function onSetExpiry(clientId, itemKey, expiresOn) {
@@ -87,11 +104,15 @@ export default function App() {
     try { await store.setRecurItem(clientId, itemKey, patch); } catch (e) { console.error(e); refresh(); }
   }
 
-  async function onToggleSetupDone(clientId, itemKey) {
+  async function onToggleSetupDone(clientId, itemKey, opts) {
     const bucket = (state.setupStatus[clientId] || {})[itemKey] || {};
+    const willBeDone = !bucket.done;
     const patch = bucket.done ? { done: false, na: false, date: null } : { done: true, na: false, date: new Date().toISOString().slice(0, 10) };
     setState((s) => ({ ...s, setupStatus: { ...s.setupStatus, [clientId]: { ...(s.setupStatus[clientId] || {}), [itemKey]: patch } } }));
     try { await store.setSetupItem(clientId, itemKey, patch); } catch (e) { console.error(e); refresh(); }
+    if (willBeDone && !(opts && opts.silent)) {
+      showToast('Step marked done', () => onToggleSetupDone(clientId, itemKey, { silent: true }));
+    }
   }
   async function onToggleSetupNA(clientId, itemKey) {
     const bucket = (state.setupStatus[clientId] || {})[itemKey] || {};
@@ -115,17 +136,29 @@ export default function App() {
       setState((s) => ({ ...s, customTasks: { ...s.customTasks, [clientId]: [...(s.customTasks[clientId] || []), { id, ...task, status: 'Not Started' }] } }));
     } catch (e) { alert('Could not add task: ' + e.message); }
   }
-  async function onToggleTask(clientId, task) {
-    const newStatus = task.status === 'Complete' ? 'Not Started' : 'Complete';
+  async function onToggleTask(clientId, task, opts) {
+    const willBeDone = task.status !== 'Complete';
+    const newStatus = willBeDone ? 'Complete' : 'Not Started';
     setState((s) => ({
       ...s,
       customTasks: { ...s.customTasks, [clientId]: (s.customTasks[clientId] || []).map((t) => t.id === task.id ? { ...t, status: newStatus } : t) },
     }));
     try { await store.updateCustomTaskRow(task.id, { status: newStatus }); } catch (e) { console.error(e); refresh(); }
+    if (willBeDone && !(opts && opts.silent)) {
+      showToast(`${task.label} marked done`, () => onToggleTask(clientId, { ...task, status: newStatus }, { silent: true }));
+    }
   }
   async function onDeleteTask(clientId, taskId) {
     setState((s) => ({ ...s, customTasks: { ...s.customTasks, [clientId]: (s.customTasks[clientId] || []).filter((t) => t.id !== taskId) } }));
     try { await store.deleteCustomTaskRow(taskId); } catch (e) { console.error(e); refresh(); }
+  }
+
+  async function onUpdateDrivers(clientId, nextDriverRoster) {
+    const c = state.clients.find((c) => c.id === clientId);
+    if (!c) return;
+    const updated = { ...c, driverRoster: nextDriverRoster };
+    setState((s) => ({ ...s, clients: s.clients.map((cl) => cl.id === clientId ? updated : cl) }));
+    try { await store.saveClient(updated); } catch (e) { alert('Could not save driver info: ' + e.message); refresh(); }
   }
 
   async function onSaveClient(form) {
@@ -161,6 +194,7 @@ export default function App() {
   let body;
   if (loading) body = <div style={{ padding: 20, color: 'var(--muted)' }}>Loading your data…</div>;
   else if (currentView === 'overview') body = <Overview state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} onSetExpiry={onSetExpiry} goToClient={setCurrentView} />;
+  else if (currentView === 'calendar') body = <CalendarPage state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} goToClient={setCurrentView} />;
   else if (currentView === 'setup') body = <SetupPage state={state} onToggleDone={onToggleSetupDone} onToggleNA={onToggleSetupNA} />;
   else if (currentView === 'other') body = <OtherTasksPage state={state} onAdd={onAddTask} onToggle={onToggleTask} onDelete={onDeleteTask} />;
   else if (catViews[currentView]) body = <CategoryPage freq={currentView} state={state} onToggleRecur={onToggleRecur} onSetExpiry={onSetExpiry} />;
@@ -173,7 +207,8 @@ export default function App() {
     body = (
       <CompanyPage client={client} state={state} onEdit={() => setModalClient(client)}
         onToggleRecur={onToggleRecur} onToggleSetupDone={onToggleSetupDone} onToggleSetupNA={onToggleSetupNA}
-        onHide={onHide} onUnhide={onUnhide} onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask} onSetExpiry={onSetExpiry} />
+        onHide={onHide} onUnhide={onUnhide} onAddTask={onAddTask} onToggleTask={onToggleTask} onDeleteTask={onDeleteTask}
+        onSetExpiry={onSetExpiry} onUpdateDrivers={onUpdateDrivers} />
     );
   } else { body = <Overview state={state} onToggleRecur={onToggleRecur} onToggleTask={onToggleTask} onSetExpiry={onSetExpiry} goToClient={setCurrentView} />; }
 
@@ -187,6 +222,7 @@ export default function App() {
         <ClientModal client={modalClient} onSave={onSaveClient} onDelete={onDeleteClient} onClose={() => setModalClient(undefined)} />
       )}
       {showBackup && <BackupModal state={state} onRestore={onRestore} onClose={() => setShowBackup(false)} />}
+      <Toast toast={toast} onDismiss={dismissToast} />
     </div>
   );
 }

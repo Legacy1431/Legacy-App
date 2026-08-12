@@ -1,5 +1,5 @@
 'use client';
-import { RECURRING_ITEMS, itemApplies, statusOf, isoKey, titleCase, customTaskStatus, fmtDate } from '@/lib/complianceLogic';
+import { RECURRING_ITEMS, itemApplies, statusOf, isoKey, titleCase, customTaskStatus, fmtDate, computeDriverAlerts } from '@/lib/complianceLogic';
 import { computeSetupProgress } from './SetupChecklist';
 import TaskRow from './TaskRow';
 
@@ -24,6 +24,9 @@ export default function Overview({ state, onToggleRecur, onToggleTask, onSetExpi
       const status = customTaskStatus(t);
       if (status === 'overdue' || status === 'soon' || status === 'setdate') allTasks.push({ kind: 'custom', client: c, task: t, status });
     });
+  });
+  computeDriverAlerts(state.clients).forEach((a) => {
+    allTasks.push({ kind: 'driver', client: a.client, driver: a.driver, field: a.field, fieldLabel: a.fieldLabel, due: a.due, status: a.status });
   });
   const rank = { overdue: 0, setdate: 1, soon: 2 };
   allTasks.sort((a, b) => rank[a.status] - rank[b.status]);
@@ -60,6 +63,14 @@ export default function Overview({ state, onToggleRecur, onToggleTask, onSetExpi
                 showCompany onToggle={() => onToggleRecur(t.client, t.item)}
                 completion={(state.recurStatus[t.client.id] || {})[t.item.key]}
                 onSetExpiry={(val) => onSetExpiry(t.client.id, t.item.key, val)} />
+            ) : t.kind === 'driver' ? (
+              <div className="task" key={t.client.id + t.driver.id + t.field} style={{ cursor: 'pointer' }} onClick={() => goToClient(t.client.id)}>
+                <div className="task-main">
+                  <div className="task-co">{titleCase(t.client.name)}</div>
+                  <div className="task-label"><span className={`pill ${PILL_MAP[t.status][0]}`}>{PILL_MAP[t.status][1]}</span>{t.driver.name} — {t.fieldLabel}<span className="freq-tag">Driver</span></div>
+                  <div className="task-due">{t.due ? `Expires ${fmtDate(new Date(t.due + 'T00:00:00'))}` : 'No date set'}</div>
+                </div>
+              </div>
             ) : (
               <div className={`task`} key={t.task.id}>
                 <button className="chk" onClick={() => onToggleTask(t.client.id, t.task)} aria-label={`Mark ${t.task.label} done`}>

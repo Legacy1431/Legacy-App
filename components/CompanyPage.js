@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { RECURRING_ITEMS, itemApplies, statusOf, isoKey, titleCase, customTaskStatus, fmtDate, SERVICES } from '@/lib/complianceLogic';
 import SetupChecklist, { computeSetupProgress } from './SetupChecklist';
 import TaskRow from './TaskRow';
+import DriversSection from './DriversSection';
 
 const PILL_MAP = {
   overdue: ['red', 'OVERDUE'], soon: ['amber', 'DUE SOON'], setdate: ['blue', 'NO DATE'], done: ['green', 'DONE'], ok: ['green', 'OK'],
@@ -26,7 +27,7 @@ function CustomTaskRow({ task, onToggle, onDelete }) {
   );
 }
 
-export default function CompanyPage({ client, state, onEdit, onToggleRecur, onToggleSetupDone, onToggleSetupNA, onHide, onUnhide, onAddTask, onToggleTask, onDeleteTask, onSetExpiry }) {
+export default function CompanyPage({ client, state, onEdit, onToggleRecur, onToggleSetupDone, onToggleSetupNA, onHide, onUnhide, onAddTask, onToggleTask, onDeleteTask, onSetExpiry, onUpdateDrivers }) {
   const [showRest, setShowRest] = useState(false);
   const [showHidden, setShowHidden] = useState(false);
   const [taskLabel, setTaskLabel] = useState('');
@@ -115,6 +116,10 @@ export default function CompanyPage({ client, state, onEdit, onToggleRecur, onTo
           </div>
         </>
       ))}
+
+      {(client.services || []).includes('trucking') && (
+        <DriversSection client={client} onUpdate={(next) => onUpdateDrivers(client.id, next)} />
+      )}
 
       <div className="section-title">Needs attention {urgent.length > 0 && <span className="badge">{urgent.length}</span>}</div>
       {urgent.length === 0 ? (

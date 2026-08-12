@@ -3,6 +3,7 @@ import { SETUP_ITEMS, RECURRING_ITEMS, SERVICES, itemApplies, statusOf, isoKey, 
 
 const NAV_ICONS = {
   overview: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 3" /></>,
+  calendar: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /><circle cx="8" cy="15" r="1" /><circle cx="12" cy="15" r="1" /><circle cx="16" cy="15" r="1" /></>,
   setup: <><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" /></>,
   monthly: <><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></>,
   quarterly: <><path d="M21 12a9 9 0 1 1-3.5-7.1" /><path d="M21 3v6h-6" /></>,
@@ -121,6 +122,7 @@ export default function Sidebar({ state, currentView, setCurrentView, onAddCompa
       <div className="brand">Legacy<br />Compliance<small>Legacy Business Services LLC</small></div>
       <div className="nav">
         <Item view="overview" iconKey="overview" label="Overview" count={overviewUrgent} urgent={overviewUrgent > 0} />
+        <Item view="calendar" iconKey="calendar" label="Calendar" count={0} urgent={false} />
         <div className="nav-sep" />
         <Item view="setup" iconKey="setup" label="New Company Setup" count={setupCount} urgent={false} />
         <div className="nav-group-label">By deadline</div>

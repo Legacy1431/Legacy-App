@@ -28,6 +28,7 @@ create table if not exists clients (
   notes text default '',
   services text[] not null default '{trucking}',
   excise_frequency text not null default 'quarterly', -- 'monthly' | 'quarterly' | 'annual'
+  drivers jsonb not null default '[]', -- [{id, name, cdlExpires, medExpires, notes}]
   created_at timestamptz default now(),
   created_by uuid references auth.users(id)
 );

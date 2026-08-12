@@ -14,7 +14,7 @@ export default function TaskRow({ client, item, due, status, showCompany, onTogg
   const dueTxt = due ? fmtDate(due) : (item.fieldLabel ? `add ${item.fieldLabel} on this client` : 'add a date');
   const checked = status === 'done';
   const freqLabel = item.freq && FREQ_META[resolveFreq(item, client)] ? FREQ_META[resolveFreq(item, client)].label : '';
-  const showExpiry = checked && item.hasExpiration && onSetExpiry;
+  const showExpiry = checked && !!onSetExpiry;
 
   function saveExpiry() {
     onSetExpiry(expiryVal);
